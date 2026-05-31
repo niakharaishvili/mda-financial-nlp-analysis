@@ -2,6 +2,8 @@
 
 NLP and financial analysis of toy industry 10-K filings.
 
+**[Live demo →](https://niakharaishvili.github.io/mda-financial-nlp-analysis/mda_analysis_demo.html)**
+
 ## Overview
 
 This project examines whether the **narrative tone** of a company's annual report
