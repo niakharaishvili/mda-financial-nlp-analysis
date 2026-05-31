@@ -73,8 +73,7 @@ BeautifulSoup, pypdf.
 
 ## Authors
 
-Course group project (Group 5), Constructor University Bremen.
-*Add your teammates' names here so they're credited.*
+Nia Kharaishvili, Constructor University Bremen.
 
 ## Notes
 
