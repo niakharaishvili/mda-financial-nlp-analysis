@@ -1,0 +1,231 @@
+
+<style>
+.tab-btn { background: none; border: none; padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+.tab-btn.active { color: var(--color-text-primary); border-bottom: 2px solid var(--color-text-primary); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.metric-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; text-align: center; }
+.metric-label { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 4px; }
+.metric-val { font-size: 20px; font-weight: 500; margin: 0; }
+.company-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.company-name { font-size: 13px; font-weight: 500; min-width: 90px; }
+.bar-wrap { flex: 1; background: var(--color-background-secondary); border-radius: 4px; height: 10px; overflow: hidden; }
+.bar { height: 10px; border-radius: 4px; transition: width 0.6s ease; }
+.sentiment-badge { font-size: 11px; padding: 2px 8px; border-radius: var(--border-radius-md); min-width: 62px; text-align: center; }
+.result-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 16px; margin: 8px 0; }
+.result-label { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 6px; }
+.result-val { font-size: 15px; font-weight: 500; margin: 0; }
+.topic-chip { display: inline-block; background: var(--color-background-info); color: var(--color-text-info); font-size: 12px; padding: 3px 10px; border-radius: var(--border-radius-md); margin: 3px; }
+.loading-msg { color: var(--color-text-secondary); font-size: 14px; font-style: italic; }
+textarea { width: 100%; box-sizing: border-box; min-height: 120px; font-size: 13px; padding: 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); resize: vertical; font-family: var(--font-sans); }
+textarea:focus { outline: none; border-color: var(--color-border-primary); }
+select { font-size: 13px; padding: 6px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+</style>
+
+<h2 class="sr-only">MD&A financial NLP analysis demo — project findings and live text analyzer</h2>
+
+<div style="padding: 1rem 0 0;">
+  <div style="border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1.5rem;">
+    <button class="tab-btn active" onclick="switchTab('findings')">Project findings</button>
+    <button class="tab-btn" onclick="switchTab('analyzer')">Live analyzer</button>
+  </div>
+
+  <div id="tab-findings" class="tab-content active">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1.25rem;">Results from the 2021–2024 analysis of six toy & entertainment company 10-K filings.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem;">
+      <div class="metric-card"><p class="metric-label">Companies</p><p class="metric-val">6</p></div>
+      <div class="metric-card"><p class="metric-label">Years covered</p><p class="metric-val">2021–24</p></div>
+      <div class="metric-card"><p class="metric-label">NLP methods</p><p class="metric-val">LDA + NMF</p></div>
+      <div class="metric-card"><p class="metric-label">Readability scores</p><p class="metric-val">6 metrics</p></div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+        <p style="font-size: 14px; font-weight: 500; margin: 0;">Operating margin 2024</p>
+        <select id="metric-select" onchange="updateChart()" style="margin-left: auto;">
+          <option value="om">Operating margin</option>
+          <option value="sent">Sentiment score</option>
+          <option value="fog">Gunning Fog (complexity)</option>
+        </select>
+      </div>
+      <div id="bar-chart"></div>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <p style="font-size: 14px; font-weight: 500; margin: 0 0 10px;">Sentiment vs financials alignment</p>
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 10px;">Does management tone match the numbers?</p>
+      <div id="alignment-table"></div>
+    </div>
+  </div>
+
+  <div id="tab-analyzer" class="tab-content">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1rem;">Paste any MD&A text (or any business narrative) and get instant topic, sentiment, and readability analysis powered by AI.</p>
+
+    <textarea id="mda-input" placeholder="Paste MD&A text here — e.g. 'Net revenues increased 12% driven by strong performance in our core brands segment. We continue to face headwinds from elevated input costs and supply chain disruptions...'"></textarea>
+
+    <div style="display: flex; gap: 10px; margin: 10px 0 1.25rem; align-items: center;">
+      <button onclick="analyzeMDA()" style="padding: 8px 18px; font-size: 13px;">Analyze text ↗</button>
+      <button onclick="loadExample()" style="padding: 8px 14px; font-size: 13px;">Load example</button>
+      <span id="char-count" style="font-size: 12px; color: var(--color-text-secondary); margin-left: auto;"></span>
+    </div>
+
+    <div id="analysis-results" style="display:none;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
+        <div class="result-card"><p class="result-label">Sentiment</p><p class="result-val" id="res-sentiment">—</p></div>
+        <div class="result-card"><p class="result-label">Estimated readability</p><p class="result-val" id="res-readability">—</p></div>
+      </div>
+      <div class="result-card" style="margin-bottom: 10px;">
+        <p class="result-label">Main topics identified</p>
+        <div id="res-topics"></div>
+      </div>
+      <div class="result-card">
+        <p class="result-label">One-line summary</p>
+        <p class="result-val" id="res-summary" style="font-size: 13px; font-weight: 400; line-height: 1.5;"></p>
+      </div>
+    </div>
+    <div id="analysis-loading" style="display:none; padding: 1rem 0;">
+      <p class="loading-msg">Analyzing text...</p>
+    </div>
+    <div id="analysis-error" style="display:none; padding: 1rem 0;">
+      <p style="color: var(--color-text-danger); font-size: 13px;" id="error-msg"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const data = {
+  companies: ["Disney","Mattel","Build-A-Bear","Jakks Pacific","Hasbro","Funko"],
+  om: [0.418, 0.171, 0.155, 0.089, -0.287, -0.078],
+  sent: [0, 1, 1, 0.5, -1, -1],
+  fog: [18.4, 14.2, 12.8, 13.5, 17.9, 15.1],
+  sentiment2024: ["negative","positive","positive","mixed","negative","negative"],
+  omAligns: [false, true, true, true, true, true]
+};
+
+const sentColors = {
+  positive: { bg: "#EAF3DE", color: "#3B6D11", label: "positive" },
+  negative: { bg: "#FCEBEB", color: "#A32D2D", label: "negative" },
+  mixed:    { bg: "#FAEEDA", color: "#854F0B", label: "mixed" }
+};
+
+function updateChart() {
+  const metric = document.getElementById("metric-select").value;
+  const vals = data[metric];
+  const maxAbs = Math.max(...vals.map(Math.abs));
+  const isNeg = vals.some(v => v < 0);
+
+  let html = "";
+  data.companies.forEach((c, i) => {
+    const v = vals[i];
+    const pct = Math.abs(v) / maxAbs * 100;
+    const color = v < 0 ? "#E24B4A" : v > 0.3 ? "#1D9E75" : "#378ADD";
+    const label = metric === "sent"
+      ? (v === 1 ? "positive" : v === -1 ? "negative" : "mixed")
+      : metric === "fog"
+      ? v.toFixed(1)
+      : (v * 100).toFixed(1) + "%";
+
+    html += `<div class="company-row">
+      <span class="company-name">${c}</span>
+      <div class="bar-wrap">
+        <div class="bar" style="width:${pct.toFixed(1)}%; background:${color};"></div>
+      </div>
+      <span style="font-size:12px; min-width:52px; text-align:right; color:var(--color-text-secondary);">${label}</span>
+    </div>`;
+  });
+  document.getElementById("bar-chart").innerHTML = html;
+  document.querySelector("p[style*='font-weight: 500']") && null;
+  const titles = { om: "Operating margin 2024", sent: "MD&A sentiment 2024", fog: "Gunning Fog index (higher = more complex)" };
+  document.querySelector("#tab-findings .bar-wrap")?.closest("div")?.previousElementSibling?.querySelector("p")
+    && (document.querySelector("#tab-findings [style*='font-weight: 500']").textContent = titles[metric]);
+}
+
+function buildAlignmentTable() {
+  let html = "";
+  data.companies.forEach((c, i) => {
+    const s = data.sentiment2024[i];
+    const sc = sentColors[s];
+    const aligned = data.omAligns[i];
+    html += `<div class="company-row">
+      <span class="company-name">${c}</span>
+      <span class="sentiment-badge" style="background:${sc.bg}; color:${sc.color};">${sc.label}</span>
+      <span style="font-size:12px; color:var(--color-text-secondary); flex:1; text-align:right;">${aligned ? "✓ aligned" : "↗ diverges"}</span>
+    </div>`;
+  });
+  document.getElementById("alignment-table").innerHTML = html;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  event.target.classList.add("active");
+}
+
+document.getElementById("mda-input").addEventListener("input", function() {
+  const n = this.value.length;
+  document.getElementById("char-count").textContent = n > 0 ? n + " chars" : "";
+});
+
+function loadExample() {
+  document.getElementById("mda-input").value = "Net revenues increased 8% year-over-year, driven primarily by strong performance in our consumer products segment and favorable pricing actions. We continued to face elevated input costs due to persistent inflation and supply chain disruptions, partially offset by our ongoing cost optimization program. Operating income declined 12% as increased marketing investment and restructuring charges weighed on margins. We remain cautious about the near-term demand environment but are confident in the long-term strength of our brand portfolio and digital transformation strategy.";
+  document.getElementById("char-count").textContent = document.getElementById("mda-input").value.length + " chars";
+}
+
+async function analyzeMDA() {
+  const text = document.getElementById("mda-input").value.trim();
+  if (!text || text.length < 30) {
+    document.getElementById("analysis-error").style.display = "block";
+    document.getElementById("error-msg").textContent = "Please paste at least a sentence or two of MD&A text.";
+    return;
+  }
+  document.getElementById("analysis-results").style.display = "none";
+  document.getElementById("analysis-error").style.display = "none";
+  document.getElementById("analysis-loading").style.display = "block";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `Analyze this MD&A text and respond ONLY with a JSON object, no markdown, no preamble:
+{
+  "sentiment": "positive" | "negative" | "neutral" | "mixed",
+  "readability": "clear" | "moderate" | "complex" | "very complex",
+  "topics": ["topic 1", "topic 2", "topic 3"],
+  "summary": "one sentence summary of the main narrative"
+}
+
+MD&A text:
+${text.slice(0, 2000)}`
+        }]
+      })
+    });
+    const d = await res.json();
+    const raw = d.content[0].text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(raw);
+
+    document.getElementById("res-sentiment").textContent = parsed.sentiment;
+    document.getElementById("res-readability").textContent = parsed.readability;
+    document.getElementById("res-summary").textContent = parsed.summary;
+
+    const topicsHtml = (parsed.topics || []).map(t => `<span class="topic-chip">${t}</span>`).join("");
+    document.getElementById("res-topics").innerHTML = topicsHtml;
+
+    document.getElementById("analysis-loading").style.display = "none";
+    document.getElementById("analysis-results").style.display = "block";
+  } catch(e) {
+    document.getElementById("analysis-loading").style.display = "none";
+    document.getElementById("analysis-error").style.display = "block";
+    document.getElementById("error-msg").textContent = "Analysis failed — " + e.message;
+  }
+}
+
+updateChart();
+buildAlignmentTable();
+</script>
